@@ -29,10 +29,30 @@ The implementation may use either:
   and resource cleanup.
 ## Traffic Matrix Semantics
 
-NCCL_TESTS_ALLTOALLV_MATRIX_FILE
-64 66
-512 516
-4096 5000
+The values define three independent two-rank matrix files. Self-traffic is
+zero, and the off-diagonal entries specify the token counts exchanged between
+rank 0 and rank 1.
+
+### Case 1
+
+```text
+0 64
+66 0
+```
+
+### Case 2
+
+```text
+0 512
+516 0
+```
+
+### Case 3
+
+```text
+0 4096
+5000 0
+```
 
 `NCCL_TESTS_ALLTOALLV_MATRIX_FILE` shall specify **token counts**, rather than
 raw byte counts:
