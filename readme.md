@@ -2,31 +2,22 @@
 
 ## Objective
 
+Implement and benchmark a **device-initiated AllToAllv kernel** that
+transfers a variable number of tokens between **two ranks**, where each rank
+is one NVIDIA DGX Spark (GB10) and the two machines are connected through
+their ConnectX-7 200 GbE ports (RoCE v2).
+
+"Device-initiated" means a CUDA kernel drives the communication: it posts the
+transfers, observes their completion, and consumes the received tokens —
+without returning to the host between operations. This is the communication
+pattern of MoE expert-parallel dispatch/combine (cf. DeepEP, NCCL Device API
+GIN): each token is 7168 bytes — one fp8 DeepSeek-V3 hidden vector.
+
+## Objective
+
 Develop and benchmark an AllToAllv device kernel that transfers a variable
 number of tokens between ranks.
 
-The implementation may use either:
-
-- C++/CUDA with the NCCL Device API and GIN
-- Python CuTeDSL with the nccl4py Device API bindings.
-- NCCL_TESTS_ALLTOALLV_MATRIX_FILE to pass the token num matrix to app
-
-
-
-## Reference Implementations
-
-- [nccl-tests AllToAll](https://github.com/NVIDIA/nccl-tests/blob/master/src/alltoall.cu):
-  reference for C++ Device API requirements, `GinAlltoAllKernel`, GIN
-  connection setup, signal waiting, flushing, barriers, kernel specialization,
-  and `-D` device-implementation dispatch.
-- [nccl-tests AllToAllv](https://github.com/NVIDIA/nccl-tests/blob/master/src/alltoallv.cu):
-  reference for matrix-file parsing, asymmetric peer sizes, packed send/receive
-  offsets, expected-data generation, bandwidth calculation, and test-harness
-  integration.
-- [nccl4py CuTeDSL GIN example](https://github.com/NVIDIA/nccl/blob/master/bindings/nccl4py/examples/cute/main.py):
-  reference for MPI/NCCL initialization, symmetric window registration,
-  `ncclDevComm` creation, CuTeDSL `Gin.put`, completion signals, validation,
-  and resource cleanup.
 ## Traffic Matrix Semantics
 
 The values define three independent two-rank matrix files. Self-traffic is
@@ -54,43 +45,11 @@ rank 0 and rank 1.
 5000 0
 ```
 
-`NCCL_TESTS_ALLTOALLV_MATRIX_FILE` shall specify **token counts**, rather than
-raw byte counts:
-
-```text
-matrix[src_rank][dst_rank] = number of tokens sent from src_rank to dst_rank
-```
-
-Each token is exactly:
-
-```text
-7168 bytes (7 KiB)
-```
-
-Therefore:
-
-```text
-message_bytes[src][dst] = token_count[src][dst] * 7168
-```
-
-## Required Two-Rank Benchmark Cases
-
-The supplied values are interpreted as three independent, asymmetric,
-two-rank benchmark cases:
-
-| Case | Rank 0 → Rank 1 | Rank 1 → Rank 0 |
-|---|---:|---:|
-| 1 | 64 tokens / 448 KiB | 66 tokens / 462 KiB |
-| 2 | 512 tokens / 3.5 MiB | 516 tokens / 3612 KiB |
-| 3 | 4096 tokens / 28 MiB | 5000 tokens / 35000 KiB |
-
-
 
 ## Benchmark and Validation
 
 Run all three matrix cases with exactly two ranks and report:
 
 - Transfer time.
-
 
 
